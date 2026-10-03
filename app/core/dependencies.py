@@ -8,6 +8,7 @@ from app.retrieval.retriever import Retriever
 from app.llm.client import OllamaClient
 from app.services.ingestion_service import IngestionService
 from app.services.rag_service import RAGService
+from app.retrieval.query_rewriter import QueryRewriter
 
 
 def get_embedder():
@@ -36,7 +37,8 @@ def get_retriever():
 def get_rag_service():
     return RAGService(
         retriever=get_retriever(),
-        ollama_client=get_ollama_client()
+        ollama_client=get_ollama_client(),
+        query_rewriter=get_query_rewriter()
     )
 
 
@@ -60,4 +62,10 @@ def get_ingestion_service():
         chunker=chunker,
         embedder=embedder,
         indexer=indexer
+    )
+
+def get_query_rewriter():
+    return QueryRewriter(
+        base_url=settings.OLLAMA_BASE_URL,
+        model=settings.OLLAMA_GENERATION_MODEL
     )

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>College Notes AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+        <div class="sidebar-header">
+            <div class="logo">
+                ✦
+            </div>
+
+            <span>College Notes AI</span>
+        </div>
+
+        <button class="new-chat-btn" id="newChatBtn">
+            <span>＋</span>
+            New chat
+        </button>
+
+        <div class="history-section">
+
+            <div class="history-title">
+                Recent chats
+            </div>
+
+            <div id="chatHistory"></div>
+
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="status-dot"></div>
+            Local AI • Ollama
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+
+            <button class="mobile-menu" id="mobileMenu">
+                ☰
+            </button>
+
+            <div class="topbar-title">
+                <strong>College Notes AI</strong>
+                <span>RAG-powered study assistant</span>
+            </div>
+
+        </header>
+
+
+        <!-- CHAT AREA -->
+        <section class="chat-area" id="chatArea">
+
+            <div class="welcome-screen" id="welcomeScreen">
+
+                <div class="welcome-icon">
+                    ✦
+                </div>
+
+                <h1>
+                    What can I help you learn?
+                </h1>
+
+                <p>
+                    Ask questions about your uploaded college notes.
+                </p>
+
+                <div class="suggestions">
+
+                    <button onclick="useSuggestion('What is DBMS?')">
+                        What is DBMS?
+                    </button>
+
+                    <button onclick="useSuggestion('Explain the important concepts in my notes.')">
+                        Explain important concepts
+                    </button>
+
+                    <button onclick="useSuggestion('Summarize my notes.')">
+                        Summarize my notes
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- COMPOSER -->
+        <div class="composer-container">
+
+            <!-- Upload status -->
+            <div
+                class="upload-status hidden"
+                id="uploadStatus">
+            </div>
+
+
+            <!-- Selected file -->
+            <div
+                class="selected-file hidden"
+                id="selectedFile">
+
+                <div class="file-info">
+
+                    <div class="file-icon">
+                        📄
+                    </div>
+
+                    <div>
+                        <div id="fileName"></div>
+                        <small id="fileStatus">
+                            Ready
+                        </small>
+                    </div>
+
+                </div>
+
+                <button
+                    class="remove-file"
+                    id="removeFile">
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- Composer -->
+            <form
+                class="composer"
+                id="chatForm">
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    accept=".pdf,.docx"
+                    hidden
+                >
+
+                <button
+                    type="button"
+                    class="attach-btn"
+                    id="attachBtn"
+                    title="Attach document">
+
+                    📎
+
+                </button>
+
+
+                <textarea
+                    id="messageInput"
+                    placeholder="Ask anything about your notes..."
+                    rows="1"
+                    autocomplete="off">
+                </textarea>
+
+
+                <button
+                    type="submit"
+                    class="send-btn"
+                    id="sendBtn">
+
+                    ↑
+
+                </button>
+
+            </form>
+
+
+            <div class="composer-hint">
+                College Notes AI can make mistakes. Check important information.
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>

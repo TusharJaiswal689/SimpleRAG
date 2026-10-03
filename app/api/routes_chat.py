@@ -5,7 +5,10 @@ from app.api.schemas import ChatRequest
 from app.core.dependencies import get_rag_service
 
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+router = APIRouter(
+    prefix="/chat",
+    tags=["Chat"]
+)
 
 
 @router.post("/")
@@ -13,7 +16,11 @@ def chat(
     request: ChatRequest,
     rag_service=Depends(get_rag_service)
 ):
-    answer_stream = rag_service.generate_answer(request.query)
+
+    answer_stream = rag_service.generate_answer(
+        query=request.query,
+        history=request.history
+    )
 
     return StreamingResponse(
         answer_stream,

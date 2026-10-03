@@ -16,6 +16,7 @@ class Retriever:
         self.top_k = top_k
 
     def retrieve(self, query: str) -> list[dict]:
+
         query_vector = self.embedder.embed_query(query)
 
         response = self.index.query(

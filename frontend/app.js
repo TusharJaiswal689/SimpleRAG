@@ -295,18 +295,26 @@ function addMessage(
     contentElement.className =
         "message-content";
 
-    contentElement.textContent =
-        content;
+    if (role === "assistant") {
+
+    contentElement.innerHTML =
+        marked.parse(content);
+
+    } else {
+
+        contentElement.textContent =
+            content;
+
+    }
 
 
     if (streaming) {
 
         contentElement.innerHTML =
-            escapeHTML(content) +
+            marked.parse(content) +
             `<span class="streaming-cursor"></span>`;
 
     }
-
 
     message.appendChild(avatar);
 

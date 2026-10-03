@@ -12,8 +12,10 @@ def build_rag_prompt(
     )
 
     history_text = "\n".join(
-        f"{message['role'].capitalize()}: {message['content']}"
-        for message in history
+    f"{message.role.capitalize()}: {message.content}"
+    if hasattr(message, "role")
+    else f"{message['role'].capitalize()}: {message['content']}"
+    for message in history
     )
 
     return f"""

@@ -6,12 +6,18 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes_chat import router as chat_router
 from app.api.routes_documents import router as documents_router
+from app.db.session import init_db
 
 
 app = FastAPI(
     title="College Notes RAG API",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def startup() -> None:
+    init_db()
 
 
 app.include_router(chat_router)

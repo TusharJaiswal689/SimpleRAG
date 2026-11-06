@@ -202,7 +202,9 @@ function renderMessages() {
 
             addMessage(
                 message.role,
-                message.content
+                message.content,
+                false,
+                message.sources || []
             );
 
         }
@@ -264,10 +266,79 @@ function showWelcome() {
 }
 
 
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+}
+
+function renderAssistantHtml(content) {
+
+    const text = String(content ?? "");
+
+    if (typeof window === "undefined" || !window.marked || !window.DOMPurify) {
+        return escapeHtml(text).replace(/\n/g, "<br>");
+    }
+
+    try {
+        const parsed = window.marked.parse(text);
+        return window.DOMPurify.sanitize(parsed, {
+            ALLOWED_TAGS: [
+                "p",
+                "br",
+                "strong",
+                "b",
+                "em",
+                "i",
+                "code",
+                "pre",
+                "ul",
+                "ol",
+                "li",
+                "a",
+                "blockquote",
+                "h1",
+                "h2",
+                "h3",
+                "h4",
+                "h5",
+                "h6",
+                "hr",
+                "table",
+                "thead",
+                "tbody",
+                "tr",
+                "th",
+                "td",
+                "span",
+                "div"
+            ],
+            ALLOWED_ATTR: [
+                "href",
+                "target",
+                "rel",
+                "class",
+                "title"
+            ],
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
+        });
+    }
+    catch (error) {
+        return escapeHtml(text).replace(/\n/g, "<br>");
+    }
+
+}
+
 function addMessage(
     role,
     content,
-    streaming = false
+    streaming = false,
+    sources = []
 ) {
 
     const message =
@@ -297,8 +368,8 @@ function addMessage(
 
     if (role === "assistant") {
 
-    contentElement.innerHTML =
-        marked.parse(content);
+        contentElement.innerHTML =
+            renderAssistantHtml(content);
 
     } else {
 
@@ -311,9 +382,13 @@ function addMessage(
     if (streaming) {
 
         contentElement.innerHTML =
-            marked.parse(content) +
+            renderAssistantHtml(content) +
             `<span class="streaming-cursor"></span>`;
 
+    }
+
+    if (role === "assistant" && sources.length > 0) {
+        renderSources(contentElement, sources);
     }
 
     message.appendChild(avatar);
@@ -325,6 +400,40 @@ function addMessage(
 
     return contentElement;
 
+}
+
+function renderSources(contentElement, sources) {
+
+    const visibleSources = sources.filter(
+        source => source.filename || source.page_number !== undefined
+    );
+    if (visibleSources.length === 0) {
+        return;
+    }
+
+    const sourceList = document.createElement("div");
+    sourceList.className = "retrieved-sources";
+
+    const heading = document.createElement("strong");
+    heading.textContent = "Retrieved sources (not claim-verified citations)";
+    sourceList.appendChild(heading);
+
+    const list = document.createElement("ul");
+    visibleSources.forEach(source => {
+        const item = document.createElement("li");
+        const parts = [];
+        if (source.filename) {
+            parts.push(source.filename);
+        }
+        if (source.page_number !== undefined) {
+            parts.push(`page ${source.page_number}`);
+        }
+        item.textContent = parts.join(", ");
+        list.appendChild(item);
+    });
+
+    sourceList.appendChild(list);
+    contentElement.appendChild(sourceList);
 }
 
 
@@ -463,7 +572,10 @@ async function sendMessage(query) {
                     headers: {
 
                         "Content-Type":
-                            "application/json"
+                            "application/json",
+
+                        "Accept":
+                            "text/event-stream"
 
                     },
 
@@ -524,8 +636,40 @@ async function sendMessage(query) {
         const decoder =
             new TextDecoder();
 
-
         let answer = "";
+        let sources = [];
+        let eventBuffer = "";
+
+        function consumeEvent(frame) {
+            if (!frame.trim()) {
+                return;
+            }
+
+            let eventName = "message";
+            const dataLines = [];
+            frame.split(/\r?\n/).forEach(line => {
+                if (line.startsWith("event:")) {
+                    eventName = line.slice(6).trim();
+                } else if (line.startsWith("data:")) {
+                    dataLines.push(line.slice(5).trimStart());
+                }
+            });
+
+            if (dataLines.length === 0) {
+                return;
+            }
+
+            const data = JSON.parse(dataLines.join("\n"));
+            if (eventName === "token") {
+                answer += data;
+                assistantElement.innerHTML =
+                    renderAssistantHtml(answer) +
+                    `<span class="streaming-cursor"></span>`;
+                scrollToBottom();
+            } else if (eventName === "sources" && Array.isArray(data)) {
+                sources = data;
+            }
+        }
 
 
         while (true) {
@@ -544,39 +688,25 @@ async function sendMessage(query) {
             }
 
 
-            const chunk =
-                decoder.decode(
-                    value,
-                    {
-                        stream: true
-                    }
-                );
-
-
-            answer += chunk;
-
-
-            /*
-               Update the UI
-               immediately.
-            */
-
-            assistantElement.innerHTML =
-                escapeHTML(answer) +
-                `<span class="streaming-cursor"></span>`;
-
-
-            scrollToBottom();
+            eventBuffer += decoder.decode(value, {stream: true});
+            const frames = eventBuffer.split(/\r?\n\r?\n/);
+            eventBuffer = frames.pop() || "";
+            frames.forEach(consumeEvent);
 
         }
 
+        eventBuffer += decoder.decode();
+        if (eventBuffer.trim()) {
+            consumeEvent(eventBuffer);
+        }
 
         /*
            Remove cursor
         */
 
-        assistantElement.textContent =
-            answer;
+        assistantElement.innerHTML =
+            renderAssistantHtml(answer);
+        renderSources(assistantElement, sources);
 
 
         /*
@@ -589,7 +719,10 @@ async function sendMessage(query) {
                 "assistant",
 
             content:
-                answer
+                answer,
+
+            sources:
+                sources
 
         });
 

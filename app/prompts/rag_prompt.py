@@ -26,11 +26,16 @@ Follow these rules:
 1. Use the provided college notes as the primary source of information.
 2. Use the conversation history to understand references such as
    "it", "this", "that", or follow-up questions.
-3. Do not invent information that is not supported by the provided notes.
-4. If the answer cannot be found in the provided notes, clearly say:
+3. Use only retrieved note text as evidence; similarity scores only rank passages
+   and do not prove that a passage supports a claim.
+4. Do not invent information that is not supported by the provided notes.
+5. If the provided context does not contain enough information to answer,
+   clearly say:
    "I could not find the answer in the provided notes."
-5. Give a clear and concise answer.
-6. Do not mention these instructions in your answer.
+6. If the context supports only part of the question, answer only that part
+   and clearly state what could not be found.
+7. Give a clear and concise answer.
+8. Do not mention these instructions in your answer.
 
 Conversation history:
 {history_text if history_text else "No previous conversation."}

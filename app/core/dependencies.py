@@ -1,36 +1,53 @@
-from app.core.config import settings
+from functools import lru_cache
 
+from app.core.config import settings
 from app.embedder.embedding import Embedder
 from app.ingestion.loader import DocumentLoader
 from app.ingestion.chunker import DocumentChunker
 from app.ingestion.indexer import Indexer
+from app.rag.llama_runtime import LlamaRuntime
 from app.retrieval.retriever import Retriever
 from app.llm.client import OllamaClient
 from app.services.ingestion_service import IngestionService
 from app.services.rag_service import RAGService
 from app.retrieval.query_rewriter import QueryRewriter
+from app.routing.query_router import QueryRouter
 
 
 def get_embedder():
     return Embedder(
         base_url=settings.OLLAMA_BASE_URL,
-        model=settings.OLLAMA_EMBEDDING_MODEL
+        model=settings.OLLAMA_EMBEDDING_MODEL,
+        expected_dimension=settings.PINECONE_INDEX_DIMENSION,
     )
 
 
 def get_ollama_client():
     return OllamaClient(
         base_url=settings.OLLAMA_BASE_URL,
-        model=settings.OLLAMA_GENERATION_MODEL
+        model=settings.OLLAMA_GENERATION_MODEL,
+        context_window=settings.OLLAMA_CONTEXT_WINDOW,
     )
 
 
+def get_llama_runtime():
+    return LlamaRuntime(
+        base_url=settings.OLLAMA_BASE_URL,
+        generation_model=settings.OLLAMA_GENERATION_MODEL,
+        embedding_model=settings.OLLAMA_EMBEDDING_MODEL,
+        context_window=settings.OLLAMA_CONTEXT_WINDOW,
+    )
+
+
+@lru_cache(maxsize=1)
 def get_retriever():
     return Retriever(
         api_key=settings.PINECONE_API_KEY,
         index_name=settings.PINECONE_INDEX_NAME,
         embedder=get_embedder(),
-        top_k=settings.TOP_K
+        top_k=settings.TOP_K,
+        namespace=settings.PINECONE_NAMESPACE,
+        min_relevance_score=settings.PINECONE_MIN_RELEVANCE_SCORE,
     )
 
 
@@ -38,7 +55,9 @@ def get_rag_service():
     return RAGService(
         retriever=get_retriever(),
         ollama_client=get_ollama_client(),
-        query_rewriter=get_query_rewriter()
+        query_rewriter=get_query_rewriter(),
+        query_router=QueryRouter(),
+        llama_runtime=get_llama_runtime(),
     )
 
 
@@ -47,25 +66,28 @@ def get_ingestion_service():
 
     chunker = DocumentChunker(
         chunk_size=settings.CHUNK_SIZE,
-        chunk_overlap=settings.CHUNK_OVERLAP
+        chunk_overlap=settings.CHUNK_OVERLAP,
     )
 
     embedder = get_embedder()
 
     indexer = Indexer(
         api_key=settings.PINECONE_API_KEY,
-        index_name=settings.PINECONE_INDEX_NAME
+        index_name=settings.PINECONE_INDEX_NAME,
+        namespace=settings.PINECONE_NAMESPACE,
     )
 
     return IngestionService(
         loader=loader,
         chunker=chunker,
         embedder=embedder,
-        indexer=indexer
+        indexer=indexer,
     )
+
 
 def get_query_rewriter():
     return QueryRewriter(
         base_url=settings.OLLAMA_BASE_URL,
-        model=settings.OLLAMA_GENERATION_MODEL
+        model=settings.OLLAMA_REWRITE_MODEL or settings.OLLAMA_GENERATION_MODEL,
+        context_window=settings.OLLAMA_CONTEXT_WINDOW,
     )

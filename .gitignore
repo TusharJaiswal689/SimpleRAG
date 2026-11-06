@@ -1,5 +1,8 @@
-*.emv
+*.env
 __pycache__
+.pytest_cache
 venv
 .env
 data/
+z
+download_web_docs.py

@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+import tempfile
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
@@ -23,11 +25,24 @@ async def upload_document(
         exist_ok=True
     )
 
-    file_path = upload_dir / file.filename
+    filename = Path(file.filename or "uploaded-document").name
+    target_path = upload_dir / filename
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=".ingesting-",
+            suffix=Path(filename).suffix,
+            dir=upload_dir,
+            delete=False,
+        ) as buffer:
+            temporary_path = Path(buffer.name)
+            buffer.write(await file.read())
 
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-
-    return ingestion_service.ingest(
-        str(file_path)
-    )
+        result = ingestion_service.ingest(str(temporary_path), filename=filename)
+        os.replace(temporary_path, target_path)
+        temporary_path = None
+        return result
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
